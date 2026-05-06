@@ -9,7 +9,7 @@ const supabase = createClient(
 
 type Kullanici = { id: string, kullanici_adi: string, ad_soyad: string, rol: string, kat: string }
 type Urun = { id: string, kod: string, barkod: string, ad: string, kategori: string, stok: number, son_fiyat: number }
-type Talep = { id: string, talep_barkod: string, adet: number, durum: string, urunler: Urun, kullanicilar: Kullanici, talep_tarihi: string }
+type Talep = { id: string, talep_barkod: string, adet: number, durum: string, talep_tarihi: string, urunler: Urun, kullanicilar: Kullanici }
 
 export default function Home() {
   const [kullanici, setKullanici] = useState<Kullanici | null>(null)
@@ -37,7 +37,7 @@ export default function Home() {
   const veriCek = async () => {
     const { data: u } = await supabase.from('urunler').select('*').order('ad')
     setUrunler(u || [])
-    const { data: t } = await supabase.from('talepler').select(', urunler(), kullanicilar(*)').order('talep_tarihi', { ascending: false })
+    const { data: t } = await supabase.from('talepler').select('*, urunler(*), kullanicilar(*)').order('talep_tarihi', { ascending: false })
     setTalepler(t || [])
   }
 
@@ -60,7 +60,7 @@ export default function Home() {
   }
 
   const barkodOkut = async () => {
-    const { data: talep } = await supabase.from('talepler').select(', urunler()').eq('talep_barkod', barkod).single()
+    const { data: talep } = await supabase.from('talepler').select('*, urunler(*)').eq('talep_barkod', barkod).single()
     if (talep && talep.durum === 'ONAYLANDI') {
       await supabase.from('talepler').update({ durum: 'TESLIM_EDILDI', teslim_tarihi: new Date() }).eq('id', talep.id)
       await supabase.from('stok_hareketleri').insert({
@@ -90,18 +90,16 @@ export default function Home() {
     veriCek()
   }, [])
 
-  if (!kullanici) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-100">
-        <div className="bg-white p-8 rounded-lg shadow w-96">
-          <h1 className="text-2xl font-bold mb-6 text-center">AYTK Takip Sistemi</h1>
-          <input className="border p-2 w-full mb-3 rounded" placeholder="Kullanıcı Adı" value={k_adi} onChange={e => setKadi(e.target.value)} />
-          <input className="border p-2 w-full mb-4 rounded" type="password" placeholder="Şifre" value={sifre} onChange={e => setSifre(e.target.value)} />
-          <button className="bg-blue-600 text-white p-2 w-full rounded" onClick={giris}>Giriş Yap</button>
-        </div>
+  if (!kullanici) return (
+    <div className="flex min-h-screen items-center justify-center bg-gray-100">
+      <div className="bg-white p-8 rounded-lg shadow w-96">
+        <h1 className="text-2xl font-bold mb-6 text-center">AYTK Takip Sistemi</h1>
+        <input className="border p-2 w-full mb-3 rounded" placeholder="Kullanıcı Adı" value={k_adi} onChange={e => setKadi(e.target.value)} />
+        <input className="border p-2 w-full mb-4 rounded" type="password" placeholder="Şifre" value={sifre} onChange={e => setSifre(e.target.value)} />
+        <button className="bg-blue-600 text-white p-2 w-full rounded" onClick={giris}>Giriş Yap</button>
       </div>
-    )
-  }
+    </div>
+  )
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
@@ -109,7 +107,7 @@ export default function Home() {
         <div className="bg-white p-4 rounded-lg shadow mb-4 flex justify-between items-center">
           <div>
             <h1 className="text-xl font-bold">AYTK Takip</h1>
-            <p className="text-sm text-gray-600">{kullanici.ad_soyad} - {kullanici.rol} {kullanici.kat && - ${kullanici.kat}}</p>
+            <p className="text-sm text-gray-600">{kullanici.ad_soyad} - {kullanici.rol} {kullanici.kat && `- ${kullanici.kat}`}</p>
           </div>
           <button className="bg-red-500 text-white px-4 py-2 rounded" onClick={cikis}>Çıkış</button>
         </div>
